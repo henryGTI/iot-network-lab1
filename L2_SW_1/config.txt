@@ -1,1 +1,110 @@
-﻿interface Vlan10 ...
+conf t
+username [REDACTED_USER] privilege 15 secret [REDACTED_PASS]
+aaa new-model
+aaa authentication login default local
+aaa authorization exec default local
+
+line con 0
+ exec-timeout 120
+ login authentication default
+ authorization exec default
+
+line vty 0 15
+ exec-timeout 120
+ transport input ssh
+ access-class deny_ssh in
+ login authentication default
+ authorization exec default
+
+ip access-list standard SNMP
+ permit [REDACTED_IP]
+ deny any
+
+snmp-server community [REDACTED_COMMUNITY] RO SNMP
+snmp-server group [REDACTED_GROUP] v3 priv
+snmp-server user [REDACTED_USER] [REDACTED_GROUP] v3 auth sha [REDACTED_PASS] priv aes 128 [REDACTED_PASS]
+
+privilege exec level 0 ping
+privilege exec level 0 show ip interface brief
+privilege exec level 0 traceroute
+privilege exec level 0 show running-config
+
+logging on
+logging buffered 4096
+logging console warnings
+logging monitor informational
+logging trap informational
+logging host [REDACTED_IP]
+service timestamps log datetime msec localtime show-timezone
+
+no lldp run
+
+ip access-list extended Spoofing_DDOS
+ deny ip 0.0.0.0 0.255.255.255 any log
+ deny ip 127.0.0.0 0.255.255.255 any log
+ deny ip 169.254.0.0 0.0.255.255 any log
+ deny ip 224.0.0.0 31.255.255.255 any log
+ permit ip any any
+
+ip access-list standard deny_ssh
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ permit [REDACTED_IP] log
+ deny any
+
+vlan 10
+vlan 20
+
+interface Vlan10
+ no shutdown
+ ip address [REDACTED_IP] 255.255.255.128
+ ip access-group Spoofing_DDOS in
+
+interface Vlan20
+ no shutdown
+ ip address [REDACTED_IP] 255.255.255.128
+ ip access-group Spoofing_DDOS in
+
+interface range gigabitEthernet0/1 - 3
+ switchport mode access
+ switchport access vlan 10
+ description ### CCTV & NVR ###
+
+interface range gigabitEthernet1/1 - 3
+ switchport mode access
+ switchport access vlan 20
+ description ### control unit ###
+
+interface gigabitEthernet0/0
+ switchport mode access
+ switchport access vlan 10
+ description ### vlan 10 uplink ###
+
+interface gigabitEthernet1/0
+ switchport mode access
+ switchport access vlan 20
+ description ### vlan 20 uplink ###
+
+ip route 0.0.0.0 0.0.0.0 [REDACTED_IP]
+ip route 0.0.0.0 0.0.0.0 [REDACTED_IP] 10
+
+banner motd ^
+
+***************************************************************
+*                        -WARNING-                            *
+* You are about to login to a CONFIDENTIAL network system     *
+* Unauthorised use of this system may constitute an offence   *
+* against the law.                                            *
+***************************************************************
+
+^
+
+end
+clear logging
+write memory
