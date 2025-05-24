@@ -22,15 +22,87 @@ IoT 네트워크(예: CCTV, 온도센서 등)를 AWS 인프라로 구현한 구�
 ## 🔄 이후 확장 사항
 
 ### ✅ EC2 인스턴스
-- CCTV 및 TempSensor 용도로 각각 EC2 인스턴스 생성
-- 퍼블릭/프라이빗 서브넷에 연결하여 동작 테스트
+```hcl
+resource "aws_instance" "cctv" {
+  ami                         = "ami-0c9c942bd7bf113a2"
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.cctv_subnet.id
+  associate_public_ip_address = true
+  iam_instance_profile        = aws_iam_instance_profile.profile.name
+  tags = {
+    Name = "cctv-instance"
+  }
+}
+
+resource "aws_instance" "temp" {
+  ami                         = "ami-0c9c942bd7bf113a2"
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.tempsensor_subnet.id
+  iam_instance_profile        = aws_iam_instance_profile.profile.name
+  tags = {
+    Name = "tempsensor-instance"
+  }
+}
+```
 
 ### ✅ NAT Gateway 구성
-- TempSensor Subnet의 아웃바운드 인터넷 접속을 위해 NAT Gateway 및 프라이빗 라우팅 테이블 추가 예정
+```hcl
+resource "aws_eip" "nat_eip" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.cctv_subnet.id
+  tags = {
+    Name = "iot-nat-gw"
+  }
+}
+
+resource "aws_route_table" "temp_rt" {
+  vpc_id = aws_vpc.iot_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+  tags = {
+    Name = "temp-rt"
+  }
+}
+
+resource "aws_route_table_association" "temp_rta" {
+  subnet_id      = aws_subnet.tempsensor_subnet.id
+  route_table_id = aws_route_table.temp_rt.id
+}
+```
 
 ### ✅ CloudWatch 로그 통합
-- EC2에 IAM Role 부여 → CloudWatch Agent 정책 포함
-- 로그 그룹 생성 및 로그 수집 설정 추가 예정
+```hcl
+resource "aws_iam_role" "ec2_cloudwatch_role" {
+  name = "ec2-cloudwatch-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cw_attach" {
+  role       = aws_iam_role.ec2_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_instance_profile" "profile" {
+  name = "ec2-instance-profile"
+  role = aws_iam_role.ec2_cloudwatch_role.name
+}
+```
 
 ---
 
@@ -81,4 +153,4 @@ iot-network-lab1/
 | 2025-05-24 | 루트 디렉토리 변수 파일 `variables.tf`, 출력파일 `outputs.tf` 추가 |
 | 2025-05-24 | `terraform.tfvars` 값 파일 생성 및 커밋                          |
 | 2025-05-24 | 디렉토리 구조 통일 및 `README.md`, `topology.png` 반영           |
-| 2025-05-24 | EC2 인스턴스, NAT Gateway, CloudWatch 로그 통합 계획 추가         |
+| 2025-05-24 | EC2 인스턴스, NAT Gateway, CloudWatch 로그 통합 계획 추가 및 샘플 코드 제공 |
