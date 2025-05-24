@@ -1,0 +1,5 @@
+project             = "iot-lab"
+vpc_cidr            = "10.0.0.0/16"
+cctv_subnet_cidr    = "10.0.10.0/24"
+temp_subnet_cidr    = "10.0.20.0/24"
+aws_region          = "ap-northeast-2"
