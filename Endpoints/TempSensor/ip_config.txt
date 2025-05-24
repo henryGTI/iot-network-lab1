@@ -1,1 +1,14 @@
+# 온도 센서 장비 IP 설정 정보 (보안 마스킹 적용)
+
+IP Address      : [REDACTED_IP]
+Subnet Mask     : 255.255.255.128
+Default Gateway : [REDACTED_IP]
+DNS Server      : [REDACTED_IP] (Optional)
+Access Port     : Gi1/1
+
+# 연결 VLAN: 20 (제어 장비용)
+# 연결 스위치: L2_SW_1
+# ACL 적용 여부: Yes (Spoofing_DDOS)
+
+# 관리 접속은 SSH 또는 MQTT 포트를 통해 제한된 IP에서만 허용됩니다.
 ﻿ip address 192.168.y.y ...
